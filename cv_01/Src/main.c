@@ -25,7 +25,7 @@
 
 int main(void)
 {
-	static const uint8_t morse[] = {1,0,1,0,1,0,0,1,1,1,0,1,1,1,0,1,1,1,0,0,1,0,1,0,1,0,0,0,0,0,0,0}; // S.O.S
+	uint32_t morse = 0xa9ddca80; // S.O.S
 
 	RCC->AHBENR |= RCC_AHBENR_GPIOAEN;		// Set clock for GPIOA
 
@@ -36,7 +36,7 @@ int main(void)
 	{
 		for(uint8_t i = 0; i < sizeof(morse); i++)
 		{
-			if(morse[i])
+			if(morse & (sizeof(morse)-i))
 			{
 				GPIOA->BSRR = (1<<5);	// LED on
 			}
