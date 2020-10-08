@@ -27,6 +27,7 @@
 #define BUTTON_DEBOUNCE 40		   	// 40 ms time for debouncing
 #define LED_TIME_SHORT 	100		   	// 100 ms time LED1 on
 #define LED_TIME_LONG 	1000		// 1000 ms time LED2 on
+#define BUTTON_DEBOUNCE_5MS 5		   	// 5 ms time for debouncing
 
 #if !defined(__SOFT_FP__) && defined(__ARM_FP)
   #warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
@@ -53,32 +54,52 @@ void blinker(void)
 void buttons(void)
 {
 	static uint32_t debounce;
+	static uint32_t debounce2;
 	static uint32_t off_time;
 
 	if(Tick > debounce + BUTTON_DEBOUNCE)  //
 	{
-		static uint32_t old_s1, old_s2;
-		uint32_t new_s1 = GPIOC->IDR & GPIOC_PIN01;		// read the S1
+		//static uint32_t old_s1;
+		static uint32_t old_s2;
+		//uint32_t new_s1 = GPIOC->IDR & GPIOC_PIN01;		// read the S1
 		uint32_t new_s2 = GPIOC->IDR & GPIOC_PIN00;		// read the S2
 
-		if (old_s1 && !new_s1) // falling edge S1
+/*		if (old_s1 && !new_s1) // falling edge S1
 		{
 			off_time = Tick + LED_TIME_LONG;
 			GPIOB->BSRR = GPIOB_PIN00;		// change the LED2 state
 		}
-
+*/
 		if (old_s2 && !new_s2) // falling edge S2
 		{
 			off_time = Tick + LED_TIME_SHORT;
 			GPIOB->BSRR = GPIOB_PIN00;		// change the LED2 state
 		}
 
+		//old_s1 = new_s1
 		old_s2 = new_s2;
 	}
 
 	if(Tick > off_time)
 	{
 		GPIOB->BRR = GPIOB_PIN00;	// change the LED2 state
+	}
+
+	if(Tick > debounce2 + BUTTON_DEBOUNCE_5MS)
+	{
+		static uint16_t debounce_reg = 0xFFFF;
+
+		debounce <<= 1;
+
+		if(GPIOC->IDR & GPIOC_PIN01)
+		{
+			debounce_reg |= 0x0001;
+			if(debounce_reg == 0x8000)
+			{
+				off_time = Tick + LED_TIME_LONG;
+				GPIOB->BSRR = GPIOB_PIN00;		// change the LED2 state
+			}
+		}
 	}
 }
 
