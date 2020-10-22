@@ -278,7 +278,7 @@ int main(void)
  800024c:	4b0a      	ldr	r3, [pc, #40]	; (8000278 <main+0x58>)
  800024e:	0018      	movs	r0, r3
  8000250:	f000 f990 	bl	8000574 <sct_led>
-  HAL_Delay(1000);
+  HAL_Delay(1000);			// Delay in ms
  8000254:	23fa      	movs	r3, #250	; 0xfa
  8000256:	009b      	lsls	r3, r3, #2
  8000258:	0018      	movs	r0, r3
@@ -295,7 +295,7 @@ int main(void)
  8000264:	b29b      	uxth	r3, r3
  8000266:	0018      	movs	r0, r3
  8000268:	f000 f9d6 	bl	8000618 <sct_value>
-	  HAL_Delay(50);
+	  HAL_Delay(50);								// Delay in ms
  800026c:	2032      	movs	r0, #50	; 0x32
  800026e:	f000 fb8b 	bl	8000988 <HAL_Delay>
 	  sct_value(__HAL_TIM_GET_COUNTER(&htim1));		// Set the actual counter value
