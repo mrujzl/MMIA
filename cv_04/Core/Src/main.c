@@ -34,6 +34,16 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
+#define ADC_Q 12
+
+/* Temperature sensor calibration value address */
+#define TEMP110_CAL_ADDR ((uint16_t*) ((uint32_t) 0x1FFFF7C2))
+#define TEMP30_CAL_ADDR ((uint16_t*) ((uint32_t) 0x1FFFF7B8))
+
+/* Internal voltage reference calibration value address */
+#define VREFINT_CAL_ADDR ((uint16_t*) ((uint32_t) 0x1FFFF7BA))
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -63,10 +73,33 @@ static void MX_ADC_Init(void);
 /* USER CODE BEGIN 0 */
 
 static volatile uint32_t raw_pot;		// For data from ADC
+static volatile uint32_t raw_temp;		// For data from ADC
+static volatile uint32_t raw_volt;		// For data from ADC
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
- raw_pot = HAL_ADC_GetValue(hadc);		// Get the value from ADC
+	static uint8_t channel = 0; // Channel switch: 0 - ADC disp, 1 - temperature, 2 - voltage
+
+	static uint32_t avg_pot;
+
+	if(channel == 0)
+	{
+		raw_pot = avg_pot >> ADC_Q;			// Exponential cumulation
+		avg_pot -= raw_pot;
+		avg_pot += HAL_ADC_GetValue(hadc); 	// Get value from ADC
+	}
+	else if(channel == 1)
+	{
+		raw_temp = HAL_ADC_GetValue(hadc); 	// Get temperature
+	}
+	else if(channel == 1)
+	{
+		raw_volt = HAL_ADC_GetValue(hadc); 	// Get voltage
+	}
+
+	if (__HAL_ADC_GET_FLAG(hadc, ADC_FLAG_EOS)) channel = 0; // Switch between ADC, temp, volt
+	else channel++;
+
 }
 
 /* USER CODE END 0 */
@@ -115,10 +148,47 @@ int main(void)
   {
     /* USER CODE END WHILE */
 
-	  sct_value(raw_pot*500/4096, raw_pot*9/4096);		// Display the value from ADC in range 0-500
-	  HAL_Delay(50);						// Delay in ms
-
     /* USER CODE BEGIN 3 */
+
+	static enum {SHOW_POT, SHOW_VOLT, SHOW_TEMP} state = SHOW_POT; 	// fsm
+	static uint32_t delay;
+
+	if(HAL_GPIO_ReadPin(S1_GPIO_Port, S1_Pin))		// Push the S1
+	{
+		state = SHOW_VOLT;							// Change the state
+		delay = HAL_GetTick();
+	}
+	if(HAL_GPIO_ReadPin(S2_GPIO_Port, S2_Pin))		// Push the S2
+	{
+		state = SHOW_TEMP;							// Change the state
+		delay = HAL_GetTick();
+	}
+
+	if(state == SHOW_POT)
+	{
+		sct_value(raw_pot*500/4096, raw_pot*9/4096);	// Show the ADC value
+	}
+	else if(state == SHOW_TEMP)
+	{
+		int32_t temperature = (raw_temp-(int32_t)(*TEMP30_CAL_ADDR)); // Calculating the temperature
+		temperature = temperature*(int32_t)(110 - 30);
+		temperature = temperature/(int32_t)(*TEMP110_CAL_ADDR - *TEMP30_CAL_ADDR);
+		temperature = temperature+30;
+
+		sct_value(temperature, raw_pot*9/4096);			// Show the temperature at display
+	}
+	else if(state == SHOW_VOLT)
+	{
+		uint32_t voltage = 330*(*VREFINT_CAL_ADDR)/raw_volt;		// Calculate the voltage
+
+		sct_value(voltage, raw_pot*9/4096);							// Show the voltage at display
+	}
+
+	if(HAL_GetTick() > delay + 1000)								// Set the state SHOW_POT after 1 s
+	{
+		state = SHOW_POT;
+	}
+
   }
   /* USER CODE END 3 */
 }
@@ -208,6 +278,20 @@ static void MX_ADC_Init(void)
   {
     Error_Handler();
   }
+  /** Configure for the selected ADC regular channel to be converted.
+  */
+  sConfig.Channel = ADC_CHANNEL_TEMPSENSOR;
+  if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure for the selected ADC regular channel to be converted.
+  */
+  sConfig.Channel = ADC_CHANNEL_VREFINT;
+  if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE BEGIN ADC_Init 2 */
 
   /* USER CODE END ADC_Init 2 */
@@ -275,6 +359,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : S2_Pin S1_Pin */
+  GPIO_InitStruct.Pin = S2_Pin|S1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pin : LD2_Pin */
   GPIO_InitStruct.Pin = LD2_Pin;
