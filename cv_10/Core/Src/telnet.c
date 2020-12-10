@@ -46,19 +46,98 @@ static void telnet_process_command(char *cmd, struct netconn *conn)
 {
 	char s[CMD_BUFFER_LEN];
 
-	sprintf(s, "Prijato: %s", cmd);
+	char *token;
+	char *saveptr;
 
-	netconn_write(conn, s, strlen(s), NETCONN_COPY);
+	token = strtok_r(cmd, " ", &saveptr);
+
+	if (strcasecmp(token, "HELLO") == 0)		// HELLO command
+	{
+		sprintf(s, "Komunikace OK\n");
+		netconn_write(conn, s, strlen(s), NETCONN_COPY);
+	}
+	else if (strcasecmp(token, "LED1") == 0) 	// LED1 command
+	{
+		token = strtok_r(NULL, " ", &saveptr);
+
+		if (strcasecmp(token, "ON") == 0)
+			HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_SET);		// LED1 ON
+		else if (strcasecmp(token, "OFF") == 0)
+			HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_RESET); 	// LED1 OFF
+
+		sprintf(s, "OK\n");
+		netconn_write(conn, s, strlen(s), NETCONN_COPY);
+	}
+	else if (strcasecmp(token, "LED2") == 0)	// LED2 command
+	{
+		token = strtok_r(NULL, " ", &saveptr);
+
+		if (strcasecmp(token, "ON") == 0)
+			HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET); 		// LED2 ON
+		else if (strcasecmp(token, "OFF") == 0)
+			HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);	// LED2 OFF
+
+		sprintf(s, "OK\n");
+		netconn_write(conn, s, strlen(s), NETCONN_COPY);
+	}
+	else if (strcasecmp(token, "LED3") == 0)	// LED3 command
+	{
+		token = strtok_r(NULL, " ", &saveptr);
+
+		if (strcasecmp(token, "ON") == 0)
+			HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_SET); 		// LED3 ON
+		else if (strcasecmp(token, "OFF") == 0)
+			HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_RESET);	// LED3 OFF
+
+		sprintf(s, "OK\n");
+		netconn_write(conn, s, strlen(s), NETCONN_COPY);
+	}
+	else if (strcasecmp(token, "STATUS") == 0)		// STATUS command
+	{
+		if (HAL_GPIO_ReadPin(LD1_GPIO_Port, LD1_Pin) == 0)
+		{
+			sprintf(s, "LED1 ON, ");
+			netconn_write(conn, s, strlen(s), NETCONN_COPY);
+		}
+		else
+		{
+			sprintf(s, "LED1 OFF, ");
+			netconn_write(conn, s, strlen(s), NETCONN_COPY);
+		}
+
+		if (HAL_GPIO_ReadPin(LD2_GPIO_Port, LD2_Pin) == 0)
+		{
+			sprintf(s, "LED2 ON, ");
+			netconn_write(conn, s, strlen(s), NETCONN_COPY);
+		}
+		else
+		{
+			sprintf(s, "LED2 OFF, ");
+			netconn_write(conn, s, strlen(s), NETCONN_COPY);
+		}
+		if (HAL_GPIO_ReadPin(LD3_GPIO_Port, LD3_Pin) == 0)
+		{
+			sprintf(s, "LED3 ON\n");
+			netconn_write(conn, s, strlen(s), NETCONN_COPY);
+		}
+		else
+		{
+			sprintf(s, "LED3 OFF\n");
+			netconn_write(conn, s, strlen(s), NETCONN_COPY);
+		}
+	}
 }
 
 static void telnet_byte_available(uint8_t c, struct netconn *conn)
 {
 	static uint16_t cnt;
 	static char data[CMD_BUFFER_LEN];
+
 	if (cnt < CMD_BUFFER_LEN && c >= 32 && c <= 127)
 		data[cnt++] = c;
 	if (c == '\n' || c == '\r') {
 		data[cnt] = '\0';
+
 	telnet_process_command(data, conn);
 	cnt = 0;
  }
