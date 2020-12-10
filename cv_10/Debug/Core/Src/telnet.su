@@ -1,0 +1,4 @@
+telnet.c:45:13:telnet_process_command	88	static
+telnet.c:54:13:telnet_byte_available	16	static
+telnet.c:68:13:telnet_thread	40	static
+telnet.c:133:6:telnet_init	16	static
