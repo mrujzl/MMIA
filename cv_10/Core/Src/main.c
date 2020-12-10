@@ -304,6 +304,9 @@ void StartDefaultTask(void const * argument)
   /* Initialize telnet server */
   telnet_init();
 
+  /* Initialize http server */
+  httpd_init();
+
   /* Infinite loop */
   for(;;)
   {
